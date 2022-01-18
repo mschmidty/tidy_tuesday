@@ -1,0 +1,104 @@
+---
+title: "Mountains"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(schmidtytheme)
+library(extrafont)
+font_import()
+loadfonts()
+
+tuesdata <- tidytuesdayR::tt_load(2020, week = 39)
+
+members <- tuesdata$members
+peaks<-tuesdata$peaks
+expeditions<-tuesdata$expeditions
+
+theme_set(theme_schmidt()+
+            theme(
+              text = element_text(family="Public Sans"),
+              plot.title = element_text(family="Abril Fatface")
+            ))
+```
+
+```{r}
+percent_fail<-expeditions%>%
+  count(peak_name, termination_reason, sort=TRUE)%>%
+  pivot_wider(names_from=termination_reason, values_from=n)%>%
+  janitor::clean_names()%>%
+  mutate(failed = rowSums(.[3:15], na.rm=T),
+         attempts = success_main_peak+failed,
+         pct_failed=failed/(success_main_peak+failed))%>%
+  filter(attempts>15)%>%
+  arrange(pct_failed)%>%
+  mutate(peak_name = fct_reorder(peak_name, pct_failed),
+         id=seq(row_number()),
+         angle_sub = 90 - 360 * (id-0.5) /nrow(.),
+         hjust = ifelse(angle_sub < -90, 1, 0),
+         angle = ifelse(angle_sub < -90, angle_sub+180, angle_sub))
+
+
+percent_fail%>%
+  ggplot(aes(peak_name, pct_failed))+
+  geom_hline(aes(yintercept=0.5, linetype = "50% Failure"), color="grey70")+
+  geom_hline(yintercept=0, color="black")+
+  geom_segment(aes(x=peak_name, xend=peak_name, y=0, yend=pct_failed), color="grey30")+
+  geom_point(color="black", fill=background_color, size=4, pch=21, stroke=1)+
+  #coord_flip()+
+  coord_polar(start = 0)+
+  labs(title = "The Hardest Peaks in the Himalaya",
+       subtitle = "% of failed attempts of Himalayan peaks with 15 attempts or more",
+       x="",
+       y="")+
+  theme(
+    axis.text=element_blank(),
+    plot.title = element_text(size=24),
+    plot.subtitle = element_text(size=12, margin = margin(10, 0, 2, 0)),
+    legend.position="bottom",
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    legend.margin=margin(0,0,0,0),
+    legend.box.margin=margin(-50,0,0,0)
+  )+
+  ylim(-0.35,1.3) +
+  geom_text(aes(x=id, y=pct_failed+.35, label = peak_name),  angle=percent_fail$angle, inherit.aes = FALSE)+
+  scale_linetype_manual(name = "", values = c(2, 2), 
+                      guide = guide_legend(override.aes = list(color = "grey70")))
+  
+```
+
+
+# Deaths
+```{r}
+members%>%
+  count(year, died)%>%
+  filter(year>1949)%>%
+  pivot_wider(names_from=died, values_from = n)%>%
+  rename(survived = `FALSE`, died = `TRUE`)%>%
+  mutate(died = replace_na(died, 0),
+         percent_died = died/(survived+died))%>%
+  ggplot(aes(year, percent_died))+
+  geom_hline(aes(yintercept=0.05, linetype = "X% Died"), color="grey70")+
+  geom_hline(yintercept=0, color="black")+
+  geom_segment(aes(x=year, xend=year, y=0, yend=percent_died), color="grey30")+
+  geom_point(color="black", fill=background_color, size=4, pch=21, stroke=1)+
+  coord_polar(start = 0)+
+  theme(
+    axis.text=element_blank(),
+    plot.title = element_text(size=24),
+    plot.subtitle = element_text(size=12, margin = margin(10, 0, 2, 0)),
+    legend.position="bottom",
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    legend.margin=margin(0,0,0,0),
+    legend.box.margin=margin(-50,0,0,0)
+  )+
+  ylim(-0.025,.1)
+  
+  View()
+```
+
+

@@ -1,0 +1,27 @@
+---
+title: "Broadband"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(rnaturalearth)
+library(USAboundaries)
+tuesdata <- tidytuesdayR::tt_load('2021-05-11')
+broadband <- tuesdata$broadband%>%
+  janitor::clean_names()
+
+united_states<-us_counties()
+  
+broadband%>%
+  mutate(
+    broadband_availability_per_fcc = as.numeric(broadband_availability_per_fcc),
+    broadband_usage = as.numeric(broadband_usage),
+    descrepency = broadband_availability_per_fcc-broadband_usage
+  )
+```
+

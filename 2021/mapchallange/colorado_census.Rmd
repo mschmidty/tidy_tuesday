@@ -1,0 +1,15 @@
+---
+title: "Population of Colorado"
+---
+
+```{r}
+library(tidyverse)
+library(tidycensus)
+census_api_key("e838894b904b5fdfa136cc2a52397edec8196788", install = T)
+```
+
+```{r}
+v20 <- load_variables(2019, "acs5", cache = TRUE)
+
+View(v20)
+```

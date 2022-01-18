@@ -1,0 +1,88 @@
+---
+title: "Colorado Elevation Rayshader"
+---
+```{r}
+options(
+  vsc.use_httpgd = FALSE,
+  max.print = 1000,
+  device = "quartz",
+  tigris_use_cache = TRUE
+)
+```
+```{r}
+library(tidyverse)
+library(elevatr)
+library(rayshader)
+library(extrafont)
+library(sf)
+library(raster)
+library(tigris)
+loadfonts()
+```
+
+## Get Colorado
+```{r}
+co<-tigris::counties(state="Colorado")
+mtz<-co%>%
+  filter(NAME %in% c("Montezuma", "La Plata", "Dolores"))
+plot(mtz["NAME"])
+```
+
+## Get elevation of colorado
+```{r}
+elev<-get_elev_raster(as(mtz, "Spatial"), z=9)
+elev_crop<-elev%>%
+  crop(mtz)
+elev_pts<-rasterToPoints(elev_crop, spatial=T)
+names(elev_pts)<-"elevation"
+
+elev_df<-data.frame(elev_pts)
+
+elmat<-raster_to_matrix(elev)
+```
+
+## First plot of Montezuma and LaPlata county
+```{r}
+elevation_map<-ggplot()+
+  geom_raster(data=elev_df, aes(x=x, y=y, fill=elevation))+
+  coord_sf()+
+  scale_fill_distiller(palette="Blues", direction=1)+
+  labs(
+    x="",
+    y=""
+  )+
+  theme(
+    legend.position="none",
+    panel.grid.major=element_blank(),
+    panel.grid.minor=element_blank(),
+    panel.border=element_blank(),
+    axis.text=element_blank(),
+    axis.text.x=element_blank(),
+    axis.text.y=element_blank(),
+    axis.ticks=element_blank(),
+    axis.ticks.x=element_blank(),
+    axis.ticks.y=element_blank(),
+    panel.background=element_blank()
+  )
+
+options("cores"=4)
+
+plot_gg(elevation_map, 
+  width=5,
+  height=5,
+  scale=250,
+  shadow_intensity=1,
+  windowsize=c(1400,866),
+  zoom = 0.55, 
+  theta=5,
+  phi = 30, 
+  multicore = TRUE)
+
+render_highquality(here("2021/mapchallange/output/first_try.png"), lightintensity=700)
+```
+
+```{r}
+elmat %>%
+  sphere_shade(texture='bw') %>%
+  plot_map()
+```

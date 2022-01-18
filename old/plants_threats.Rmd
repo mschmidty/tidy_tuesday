@@ -1,0 +1,92 @@
+---
+title: "Extinct Plants"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(maps)
+extrafont::loadfonts()
+
+tuesdata <- tidytuesdayR::tt_load(2020, week = 34)
+
+plants <- tuesdata$plants
+threats <- tuesdata$threats
+actions <- tuesdata$actions
+
+theme_set(theme_minimal()+
+            theme(
+              text=element_text(family="Public Sans"),
+              plot.title=element_text(family="Ultra", size=18, color="#444444"),
+              plot.caption = element_text(size=10,
+                                color = "#BDC3C7",
+                                margin = margin(10, 0, 0, 0)),
+              plot.subtitle = element_text(hjust = 0.5, 
+                                size = 10,
+                                color = "#888888",  
+                                face = "italic"),
+              plot.margin=margin(15, 15, 15, 15, unit="points")
+            ))
+```
+
+# Exploring the data
+```{r}
+plants%>%
+  count(country, sort = T)
+
+plants%>%
+  select(binomial_name, country, continent, threat_AA:threat_NA)%>%
+  pivot_longer(cols = starts_with("threat"), 
+               names_prefix = "threat_",
+               names_to="threat_type", 
+               values_to="count")%>%
+  filter(count!=0)%>%
+  select(-count)%>%
+  ggplot(aes(threat_type))+
+  geom_bar()
+```
+
+```{r}
+View(threats)
+
+threats%>%
+  filter(threatened!=0)%>%
+  ggplot(aes(threat_type))+
+  geom_bar(fill="#FF3FCA")+
+  coord_flip()+
+  facet_wrap(~continent)+
+  labs(title="Threats Leading to the \n Extinction of Plants",
+       subtitle="By continent",
+       x="",
+       y="",
+       caption="@mschmidty | #tidytuesday | Data: IUCN Red List")+
+  theme(
+    panel.grid=element_blank(),
+    plot.title=element_text(hjust=0.5),
+    plot.subtitle=element_text(hjust=0.5)
+  )
+
+
+  ggsave(here::here("Dropbox", "r", "tidy_tuesday", "figures", "plant_threats_by_continent.jpeg"), type="cairo")
+
+
+```
+
+```{r}
+map_data("world")%>%
+  left_join(
+    plants%>%
+      count(country, continent),
+    by=c("region"="country")
+  )
+plants%>%
+  count(continent)
+```
+
+
+
+

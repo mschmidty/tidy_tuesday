@@ -1,0 +1,117 @@
+---
+title: "Droughts in the US"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(extrafont)
+library(patchwork)
+options(device = "quartz")
+font_import()
+
+loadfonts()
+
+options(device = "quartz")
+
+tuesdata <- tidytuesdayR::tt_load('2021-07-20')
+drought <- tuesdata$drought%>%
+  mutate(
+    drought_lvl = factor(drought_lvl, c("None", "D0", "D1", "D2", "D3", "D4")),
+    state_name = usdata::abbr2state(state_abb),
+    state_name = ifelse(is.na(state_name), "Puerto Rico", state_name)
+  )
+
+theme_set(theme_minimal(
+  base_family = "Bebas Neue Regular"
+))
+theme_update(
+  plot.title = element_text(family="Bebas Neue Bold", hjust = 0.5, size=30),
+  plot.subtitle = element_text(hjust=0.5, color="grey50"),
+  plot.caption = element_text(color="grey50")
+)
+```
+
+```{r}
+drought%>%
+  filter(state_abb=="CO")%>%
+  mutate(year = year(valid_start), month = month(valid_start))%>%
+  ggplot(aes(valid_start, area_pct, fill=drought_lvl))+
+  geom_area()+
+  scale_fill_brewer(palette="RdBu", direction=-1)+
+  coord_polar()
+```
+
+```{r}
+
+main_plot <- drought%>%
+  ##filter(year(valid_start)>2019)%>%
+  ggplot(aes(valid_start, area_pct, fill=drought_lvl))+
+  geom_area()+
+  scale_fill_brewer(palette="Greys")+
+  coord_polar()+
+  facet_wrap(~state_name)+
+  labs(fill="Drought Severity Rating")+
+  guides(fill = guide_legend(nrow = 1))+
+  theme(
+    plot.title=element_blank(),
+    plot.subtitle=element_blank(),
+    axis.title=element_blank(),
+    axis.ticks = element_blank(),
+    axis.text = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "top"
+  )
+  ##ggsave("figures/drought.png", height=15, width=10, type="cairo")
+
+```
+
+```{r}
+hline_breaks<-seq(25, 100, by=25)
+markers<-tibble(hline_breaks)%>%
+  mutate(labels=paste0(hline_breaks, "%"))
+
+co_drought<-drought%>%
+  filter(state_abb == "CO")
+
+key<-ggplot()+
+  geom_area(data=co_drought, aes(valid_start, area_pct, fill=drought_lvl), alpha=0.4)+
+  coord_polar()+
+  scale_fill_brewer(palette = "Greys") +
+  scale_x_date(date_breaks = "3 years", label = year) +
+  scale_y_continuous(limits=c(0, 105))+
+  geom_text(data = markers, aes(as.Date("2001-01-01"), hline_breaks, label =  labels, vjust=1.5), size=2)+
+  labs(subtitle = "Key")+
+  theme(legend.position="none",
+        axis.title = element_blank(),
+        axis.text.y = element_blank())
+```
+
+```{r}
+design<-"
+  ##1##
+  22222
+  22222
+"
+key / main_plot + 
+  plot_layout(design=design) +
+  plot_annotation(
+    title="Drought in the United States",
+    subtitle="2001 to 2021, proportion of the state that is in each drought severity rating.", 
+    caption = "By:@mschmidty | Data: US Drought Monitor | #tidytuesday",
+    theme=theme(
+      plot.margin=margin(40, 40, 40, 40, unit="pt")
+    )
+  )
+  # +
+  # ggsave("figures/drought_w_key.png", height=14, width=10)
+```
+
+
+
