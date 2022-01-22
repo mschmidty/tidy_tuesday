@@ -1,0 +1,97 @@
+---
+Title: Bee Colonies
+---
+
+```{r}
+options(
+  device="quartz"
+)
+library(tidyverse)
+library(geofacet)
+library(extrafont)
+loadfonts()
+
+tuesdata <- tidytuesdayR::tt_load('2022-01-11')
+
+colony <- tuesdata$colony
+stressor <- tuesdata$stressor
+```
+
+
+```{r}
+theme_set(theme_minimal(
+  base_family = "Fira Code",
+  base_size = 8
+))
+
+
+theme_update(
+  plot.margin = margin(30,30,30,30,unit = "pt"),
+  plot.title = element_text(family = "Fira Code SemiBold", size=15),
+  plot.subtitle = element_text(color = "#666666"),
+  plot.background = element_rect(fill="#efefef", color = "transparent"),
+  panel.background = element_rect(fill="#efefef", color = "#333333"),
+  panel.grid.minor = element_blank(),
+  panel.grid.major = element_blank(),
+  strip.text = element_text(family="Fira Code SemiBold")
+)
+```
+
+```{r}
+colony%>%
+  group_by(year, months)%>%
+  summarize(colony_lost_total = sum(colony_lost, na.rm=T))%>%
+  ungroup()%>%
+  ggplot(aes(year, colony_lost_total, fill=months))+
+  geom_col()
+```
+
+```{r}
+plot_base<-colony%>%
+  #filter(state=="Colorado")%>%
+  mutate(
+    month_order=case_when(
+      months=="January-March" ~ "01",
+      months=="April-June" ~ "04",
+      months == "July-September" ~ "07", 
+      months == "October-December" ~ "10"
+    ),
+    date = as.Date(paste0(year, "-" ,  month_order, "-","01"), "%Y-%m-%d"),
+    colony_lost_pct = ifelse(is.na(colony_lost_pct), 0, colony_lost_pct)
+  )%>%
+  ggplot(aes(date, colony_lost_pct, fill=colony_lost_pct))+
+  geom_col(width = 90)+
+  scale_y_continuous(labels = scales::percent_format(scale = 1), breaks = scales::pretty_breaks(n = 3))+
+  labs(
+    title = "Percent (%) of Bee Colonies Lost per Quarter",
+    subtitle = "2015 to 2021: Per State in the United States.",
+    x = "",
+    y = "",
+    caption = "Data: USDA | Plot By: Mike Schmidt"
+  )+
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, margin = margin(0,0,30,0,unit="pt")),
+    axis.text = element_text(size=8),
+    axis.text.x = element_blank()
+  )+
+  facet_geo(~state)
+
+plot_base+
+  scale_fill_gradient(low = "#FFF443", high = "#222222")+
+  ggsave(here::here("2022", "02-bees", "white_bee_plot.jpg"), dpi = "retina", width=13.3*0.7, height=9.19*0.7)
+```
+
+## Plot Yellow
+
+```{r}
+base_color <- "#F4EA46"
+plot_base+
+  theme(
+    plot.background=element_rect(fill=base_color),
+    panel.background=element_rect(fill=base_color)
+  )+
+  scale_fill_gradient(low = "#222222", high = "#222222")+
+  ggsave(here::here("2022", "02-bees", "yellow_plot.jpg"), dpi = "retina", width=13.3*0.7, height=9.19*0.7)
+```
